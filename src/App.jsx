@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ── Constants ──────────────────────────────────────────────
 const CATEGORIES = {
@@ -76,8 +76,15 @@ const colorHex = (key) => EVENT_COLORS.find(c => c.key === key)?.hex ?? "#8B7355
 
 // ── Main App ───────────────────────────────────────────────
 export default function App() {
-  const [todos,  setTodos]  = useState(SAMPLE_TODOS);
-  const [events, setEvents] = useState(SAMPLE_EVENTS);
+  const [todos,  setTodos]  = useState(() => {
+    try { const s=localStorage.getItem("mc_todos"); return s?JSON.parse(s):SAMPLE_TODOS; } catch{ return SAMPLE_TODOS; }
+  });
+  const [events, setEvents] = useState(() => {
+    try { const s=localStorage.getItem("mc_events"); return s?JSON.parse(s):SAMPLE_EVENTS; } catch{ return SAMPLE_EVENTS; }
+  });
+
+  useEffect(()=>{ try{localStorage.setItem("mc_todos",JSON.stringify(todos));}catch{} },[todos]);
+  useEffect(()=>{ try{localStorage.setItem("mc_events",JSON.stringify(events));}catch{} },[events]);
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -274,56 +281,45 @@ export default function App() {
 
             {/* ── Side Panel */}
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {/* Legend */}
-              <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E3DE",padding:14}}>
-                <p style={{fontSize:11,fontWeight:700,color:"#888",marginBottom:8,letterSpacing:"0.08em"}}>凡例</p>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {EVENT_COLORS.map(c=>(
-                    <div key={c.key} style={{display:"flex",alignItems:"center",gap:4}}>
-                      <div style={{width:10,height:10,borderRadius:2,background:c.hex}}/>
-                      <span style={{fontSize:11,color:"#555"}}>{c.label}</span>
-                    </div>
-                  ))}
-                  <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:"50%",background:"#C4846A"}}/><span style={{fontSize:11,color:"#555"}}>期限超過</span></div>
-                  <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:"50%",background:"#ccc"}}/><span style={{fontSize:11,color:"#555"}}>完了済</span></div>
-                </div>
-              </div>
 
-              {/* Selected day */}
+              {/* 予定パネル */}
               <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E3DE",padding:16}}>
-                <p style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:10,letterSpacing:"0.06em"}}>
-                  {selectedDate?`${month+1}月${selectedDate}日`:"日付を選択"}
-                </p>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <p style={{fontSize:13,fontWeight:700,color:"#8B7355",margin:0}}>
+                    📅 {selectedDate?`${month+1}月${selectedDate}日の予定`:"予定"}
+                  </p>
+                  {selectedDate&&<button onClick={openNewEvent} style={{padding:"3px 10px",borderRadius:6,border:"1.5px dashed #D4BC9A",background:"transparent",color:"#8B7355",fontSize:11,cursor:"pointer",fontWeight:600}}>＋ 追加</button>}
+                </div>
                 {!selectedDate ? (
-                  <p style={{fontSize:13,color:"#bbb",textAlign:"center",padding:"20px 0"}}>カレンダーの日付をタップ</p>
+                  <p style={{fontSize:13,color:"#bbb",textAlign:"center",padding:"16px 0"}}>日付を選択してください</p>
+                ) : selectedDayEvents.length===0 ? (
+                  <p style={{fontSize:13,color:"#bbb",textAlign:"center",padding:"16px 0"}}>予定はありません</p>
                 ) : (
-                  <>
-                    {selectedDayEvents.length>0&&(
-                      <>
-                        <p style={{fontSize:11,fontWeight:700,color:"#8B7355",marginBottom:6}}>📅 予定</p>
-                        {selectedDayEvents.map(ev=>(
-                          <EventChip key={ev.id} ev={ev} onClick={()=>setDetailModal(ev)}/>
-                        ))}
-                      </>
-                    )}
-                    {selectedDayTodos.length>0&&(
-                      <>
-                        <p style={{fontSize:11,fontWeight:700,color:"#A0896A",margin:"10px 0 6px"}}>✅ ToDo</p>
-                        {selectedDayTodos.map(t=>(
-                          <TodoItem key={t.id} todo={t} onToggle={toggleTodo} onDelete={deleteTodo} isOverdue={isOverdueTodo(t)}/>
-                        ))}
-                      </>
-                    )}
-                    {selectedDayEvents.length===0&&selectedDayTodos.length===0&&(
-                      <p style={{fontSize:13,color:"#bbb",textAlign:"center",padding:"16px 0"}}>この日の予定・ToDoはありません</p>
-                    )}
-                    <div style={{display:"flex",gap:6,marginTop:12}}>
-                      <button onClick={openNewEvent} style={{flex:1,padding:"7px",borderRadius:8,border:"1.5px dashed #D4BC9A",background:"transparent",color:"#8B7355",fontSize:12,cursor:"pointer",fontWeight:600}}>＋ 予定</button>
-                      <button onClick={()=>{setTodoModal(true);setNewTodo({title:"",category:"work",deadline:dateStr(selectedDate)});}} style={{flex:1,padding:"7px",borderRadius:8,border:"1.5px dashed #C4B49A",background:"transparent",color:"#A0896A",fontSize:12,cursor:"pointer",fontWeight:600}}>＋ ToDo</button>
-                    </div>
-                  </>
+                  selectedDayEvents.map(ev=>(
+                    <EventChip key={ev.id} ev={ev} onClick={()=>setDetailModal(ev)}/>
+                  ))
                 )}
               </div>
+
+              {/* ToDoパネル */}
+              <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E3DE",padding:16}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <p style={{fontSize:13,fontWeight:700,color:"#A0896A",margin:0}}>
+                    ✅ {selectedDate?`${month+1}月${selectedDate}日のToDo`:"ToDo"}
+                  </p>
+                  {selectedDate&&<button onClick={()=>{setTodoModal(true);setNewTodo({title:"",category:"work",deadline:dateStr(selectedDate)});}} style={{padding:"3px 10px",borderRadius:6,border:"1.5px dashed #C4B49A",background:"transparent",color:"#A0896A",fontSize:11,cursor:"pointer",fontWeight:600}}>＋ 追加</button>}
+                </div>
+                {!selectedDate ? (
+                  <p style={{fontSize:13,color:"#bbb",textAlign:"center",padding:"16px 0"}}>日付を選択してください</p>
+                ) : selectedDayTodos.length===0 ? (
+                  <p style={{fontSize:13,color:"#bbb",textAlign:"center",padding:"16px 0"}}>ToDoはありません</p>
+                ) : (
+                  selectedDayTodos.map(t=>(
+                    <TodoItem key={t.id} todo={t} onToggle={toggleTodo} onDelete={deleteTodo} isOverdue={isOverdueTodo(t)}/>
+                  ))
+                )}
+              </div>
+
             </div>
           </div>
         ) : (
