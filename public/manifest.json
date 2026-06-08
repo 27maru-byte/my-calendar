@@ -1,0 +1,15 @@
+{
+  "name": "MyCalendar",
+  "short_name": "カレンダー",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F7F4",
+  "theme_color": "#8B7355",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
